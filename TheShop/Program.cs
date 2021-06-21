@@ -11,7 +11,7 @@ namespace TheShop
 			try
 			{
 				//order and sell
-				shopService.OrderAndSellArticle(1, 20, 10);
+				//shopService.OrderAndSellArticle(1, 20, 10);
 			}
 			catch (Exception ex)
 			{
@@ -22,7 +22,7 @@ namespace TheShop
 			{
 				//print article on console
 				var article = shopService.GetById(1);
-				Console.WriteLine("Found article with ID: " + article.ID);
+				Console.WriteLine("Found article with ID: " + article.Id);
 			}
 			catch (Exception ex)
 			{
@@ -33,7 +33,7 @@ namespace TheShop
 			{
 				//print article on console				
 				var article = shopService.GetById(12);
-				Console.WriteLine("Found article with ID: " + article.ID);
+				Console.WriteLine("Found article with ID: " + article.Id);
 			}
 			catch (Exception ex)
 			{
