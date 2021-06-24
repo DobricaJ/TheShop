@@ -1,4 +1,6 @@
 ﻿using System;
+using TheShop.Data;
+using TheShop.Repositories;
 
 namespace TheShop
 {
@@ -6,7 +8,29 @@ namespace TheShop
 	{
 		private static void Main(string[] args)
 		{
-			var shopService = new ShopService();
+
+
+			//var container = new StructureMap.Container(x =>
+			//{
+			//	x.For<ISupplierRepository>().Use<SupplierRepository>().Singleton();
+			//	x.For<ISalesHistoryRepository>().Use<SalesHistoryRepository>().Singleton();
+			//	//x.For<Logger>().Use<Logger>().Singleton();
+
+			//});
+
+			//var shopService = container.GetInstance<ShopService>();
+
+
+			//container.Release(shopService);
+
+			var _context = new ShopContext();
+
+			var shopService = new ShopService(
+				new SalesHistoryRepository(_context),
+				new SupplierRepository(_context),
+				new Logger(new DebugLogger())
+				);
+
 
 			try
 			{
@@ -21,7 +45,7 @@ namespace TheShop
 			try
 			{
 				//print article on console
-				var article = shopService.GetById(1);
+				var article = shopService.GetSoldArticle(1);
 				Console.WriteLine("Found article with ID: " + article.Id);
 			}
 			catch (Exception ex)
@@ -32,7 +56,7 @@ namespace TheShop
 			try
 			{
 				//print article on console				
-				var article = shopService.GetById(12);
+				var article = shopService.GetSoldArticle(12);
 				Console.WriteLine("Found article with ID: " + article.Id);
 			}
 			catch (Exception ex)
@@ -42,5 +66,7 @@ namespace TheShop
 
 			Console.ReadKey();
 		}
+
+
 	}
 }

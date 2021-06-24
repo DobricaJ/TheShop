@@ -1,13 +1,16 @@
 ﻿using TheShop.Models;
+using TheShop.Suppliers;
 
 namespace TheShop
 {
-    interface IShopService
+    public interface IShopService
     {
-        Article GetById(int id);
+        Article GetSoldArticle(int articleId);
 
-        Article OrderArticle(int id, int maxExpectedPrice);
+        Article OrderArticle(int articleId, decimal maxExpectedPrice);
 
-        void SellArticle(Article article, int buyerId);
+        void SellArticle(int articleId, int buyerId, decimal maxExpectedPrice);
+
+        void RegisterNewSupplier(ISupplier supplier);
     }
 }

@@ -1,67 +1,86 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using TheShop.Data;
 using TheShop.Models;
+using TheShop.Repositories;
 using TheShop.Suppliers;
 
 namespace TheShop
 {
-	public class ShopService : IShopService
+    public class ShopService : IShopService
 	{
-		private readonly DatabaseDriver _dbContext;
-		private readonly Logger logger;
+		private readonly ISalesHistoryRepository _salesHistoryRepository;
+		private readonly ISupplierRepository _supplierRepository;
+		private ILogger _logger;
 
-		private readonly SupplierRegister _suppliers;
-
-		private Article article = null;
-
-        public ShopService(SupplierRegister supplierRegister, DatabaseDriver dbContext)
+        public ShopService(
+			ISalesHistoryRepository salesHistoryRepository,
+			ISupplierRepository supplierRepository,
+			ILogger logger)
 		{
-			_suppliers = supplierRegister;
-			_dbContext = dbContext;
+			_salesHistoryRepository = salesHistoryRepository;
+			_supplierRepository = supplierRepository;
+			_logger = logger;
 		}
 
-		public Article GetById(int id)
+		public Article GetSoldArticle(int articleId)
 		{
-			return _dbContext.GetById(id);
+			return _salesHistoryRepository.GetById(articleId);
 		}
 
-		public Article OrderArticle(int id, int maxExpectedPrice)
+		public Article OrderArticle(int articleId, decimal maxExpectedPrice)
 		{
+			_logger = new Logger(new InfoLogger());
+			_logger.LogMessage($"Trying to order article with ArticleId = {articleId} and MaxExpectedPrice = {maxExpectedPrice}");
 
-			var s = _suppliers.Suppliers.FirstOrDefault(x => x.GetArticle(id).Price <= maxExpectedPrice);
+			try
+            {
+				return _supplierRepository.GetArticle(articleId, maxExpectedPrice);
+            }
+            catch (Exception ex)
+            {
+				string message = $"Could not order article with ArticleId = {articleId} and MaxExpectedPrice = {maxExpectedPrice}";
 
-			article = s.GetArticle(id);
+				_logger.LogMessage(message);
+				_logger = new Logger(new ErrorLogger());
+				_logger.LogMessage(ex.Message);
 
-			if (article == null)
-			{
-				throw new Exception("Could not order article");
+				throw new Exception(message);
 			}
-
-			return article;
 		}
 
-		public void SellArticle(Article article, int buyerId)
-		{
-			logger.Debug("Trying to sell article with id=" + article.Id);
+        public void RegisterNewSupplier(ISupplier supplier)
+        {
+			_supplierRepository.RegisterNewSupplier(supplier);
+        }
 
-			article.IsSold = true;
+        public void SellArticle(int articleId, int buyerId, decimal maxExpectedPrice)
+		{
+
+			_logger = new Logger(new InfoLogger());
+			_logger.LogMessage($"Trying to Sell article with ArticleId = {articleId} and MaxExpectedPrice = {maxExpectedPrice}");
+
+			var article = OrderArticle(articleId, maxExpectedPrice);
+
 			article.SoldDate = DateTime.Now;
 			article.BuyerUserId = buyerId;
 
 			try
 			{
-				_dbContext.Save(article);
-				logger.Info("Article with id=" + article.Id + " is sold.");
+				_salesHistoryRepository.Save(article);
+				_supplierRepository.RemoveFromStock(article);
+
+				_logger.LogMessage($"The Article with ArticleId = {articleId} is successfully sold");
 			}
 			catch (ArgumentNullException ex)
 			{
-				logger.Error("Could not save article with id=" + article.Id);
-				throw new Exception("Could not save article with id");
-			}
-			catch (Exception)
-			{
+				string message = $"Could not Sell article with ArticleId = {articleId} and MaxExpectedPrice = {maxExpectedPrice}";
+
+				_logger.LogMessage(message);
+				_logger = new Logger(new ErrorLogger());
+				_logger.LogMessage(ex.Message);
+
+				throw new Exception(message);
 			}
 		}
     }
