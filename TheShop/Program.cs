@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Autofac;
+using System;
 using TheShop.Data;
 using TheShop.Repositories;
 
@@ -6,36 +7,16 @@ namespace TheShop
 {
 	internal class Program
 	{
-		private static void Main(string[] args)
+
+        private static void Main(string[] args)
 		{
 
-
-			//var container = new StructureMap.Container(x =>
-			//{
-			//	x.For<ISupplierRepository>().Use<SupplierRepository>().Singleton();
-			//	x.For<ISalesHistoryRepository>().Use<SalesHistoryRepository>().Singleton();
-			//	//x.For<Logger>().Use<Logger>().Singleton();
-
-			//});
-
-			//var shopService = container.GetInstance<ShopService>();
-
-
-			//container.Release(shopService);
-
-			var _context = new ShopContext();
-
-			var shopService = new ShopService(
-				new SalesHistoryRepository(_context),
-				new SupplierRepository(_context),
-				new Logger(new DebugLogger())
-				);
-
+			var shopService = GetShopService();
 
 			try
 			{
 				//order and sell
-				//shopService.OrderAndSellArticle(1, 20, 10);
+				shopService.SellArticle(1, 20, 10);
 			}
 			catch (Exception ex)
 			{
@@ -64,9 +45,29 @@ namespace TheShop
 				Console.WriteLine("Article not found: " + ex);
 			}
 
+			Container.Dispose();
+
 			Console.ReadKey();
 		}
 
+		public static IContainer Container { get; private set; }
 
+		/// <summary>
+		///  Dependency injection
+		/// </summary>
+		/// <returns> Instance of ShopService</returns>
+		public static IShopService GetShopService()
+        {
+			var builder = new ContainerBuilder();
+			builder.RegisterType<SupplierRepository>().As<ISupplierRepository>();
+			builder.RegisterType<SalesHistoryRepository>().As<ISalesHistoryRepository>();
+			builder.RegisterType<ShopContext>().As<ShopContext>();
+			builder.RegisterType<Logger>().As<ILogger>();
+			builder.RegisterType<InfoLogger>().As<ILogger>();
+			builder.RegisterType<ShopService>().As<IShopService>();
+			Container = builder.Build();
+
+			return Container.Resolve<IShopService>();
+		}
 	}
 }
