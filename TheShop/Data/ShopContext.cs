@@ -5,6 +5,9 @@ using TheShop.Suppliers;
 
 namespace TheShop.Data
 {
+    /// <summary>
+    /// This is the simple in-memory data storage
+    /// </summary>
     public class ShopContext
     {
         public ShopContext()
