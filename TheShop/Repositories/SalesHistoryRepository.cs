@@ -12,7 +12,7 @@ namespace TheShop.Repositories
 
         public Article GetById(int id)
         {
-            return _db.SoldArticles.FirstOrDefault(a => a.Id == id);
+            return _db.SoldArticles.First(a => a.Id == id);
         }
 
         public void Save(Article article)
