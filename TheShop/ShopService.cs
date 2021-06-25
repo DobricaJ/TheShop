@@ -21,6 +21,12 @@ namespace TheShop
             _logger = logger;
         }
 
+
+        /// <summary>
+        /// Geting sold article by Id
+        /// </summary>
+        /// <param name="articleId"></param>
+        /// <returns> First founded article with that articleId </returns>
         public Article GetSoldArticle(int articleId)
         {
             _logger = new Logger(new InfoLogger());
@@ -42,6 +48,12 @@ namespace TheShop
             }
         }
 
+
+        /// <summary>
+        ///  This method trying to found an article with given parameters
+        /// </summary>
+        /// <param name="articleId"></param>
+        /// <param name="maxExpectedPrice"></param>
         public Article OrderArticle(int articleId, decimal maxExpectedPrice)
         {
             _logger = new Logger(new InfoLogger());
@@ -63,11 +75,12 @@ namespace TheShop
             }
         }
 
-        public void RegisterNewSupplier(ISupplier supplier)
-        {
-            _supplierRepository.RegisterNewSupplier(supplier);
-        }
 
+        /// <summary>
+        /// Order article > 
+        /// Save article in the sales history (sell) >
+        /// Notify Supplier to update InStock quantity
+        /// </summary>
         public void SellArticle(int articleId, int buyerId, decimal maxExpectedPrice)
         {
 
@@ -82,6 +95,7 @@ namespace TheShop
             try
             {
                 _salesHistoryRepository.Save(article);
+
                 _supplierRepository.RemoveFromStock(article);
 
                 _logger.LogMessage($"The Article with ArticleId = {articleId} is successfully sold");
@@ -96,6 +110,16 @@ namespace TheShop
 
                 throw new Exception(message);
             }
+        }
+
+
+        /// <summary>
+        /// Example how to register new supplier in runtime
+        /// </summary>
+        /// <param name="supplier"></param>
+        public void RegisterNewSupplier(ISupplier supplier)
+        {
+            _supplierRepository.RegisterNewSupplier(supplier);
         }
     }
 }

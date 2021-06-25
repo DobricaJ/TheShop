@@ -10,6 +10,7 @@ namespace TheShop.Repositories
         Article GetArticle(int id, decimal maxExpectedPrice);
 
         void RegisterNewSupplier(ISupplier supplier);
+
         void RemoveFromStock(Article article);
     }
 }

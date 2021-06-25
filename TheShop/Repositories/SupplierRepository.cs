@@ -30,6 +30,10 @@ namespace TheShop.Repositories
             _db.Suppliers.Add(supplier);
         }
 
+        /// <summary>
+        /// Increase In Stock quantity
+        /// </summary>
+        /// <param name="article"></param>
         public void RemoveFromStock(Article article)
         {
             _db.Suppliers.First(x => x.Id == article.SupplierId).Articles.First(a => a.Id == article.Id).InStock --;
