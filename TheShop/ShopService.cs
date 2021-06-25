@@ -1,197 +1,125 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using TheShop.Models;
+using TheShop.Repositories;
+using TheShop.Suppliers;
 
 namespace TheShop
 {
-	public class ShopService
-	{
-		private DatabaseDriver DatabaseDriver;
-		private Logger logger;
+    public class ShopService : IShopService
+    {
+        private readonly ISalesHistoryRepository _salesHistoryRepository;
+        private readonly ISupplierRepository _supplierRepository;
+        private ILogger _logger;
 
-		private Supplier1 Supplier1;
-		private Supplier2 Supplier2;
-		private Supplier3 Supplier3;
-		
-		public ShopService()
-		{
-			DatabaseDriver = new DatabaseDriver();
-			logger = new Logger();
-			Supplier1 = new Supplier1();
-			Supplier2 = new Supplier2();
-			Supplier3 = new Supplier3();
-		}
+        public ShopService(
+            ISalesHistoryRepository salesHistoryRepository,
+            ISupplierRepository supplierRepository,
+            ILogger logger)
+        {
+            _salesHistoryRepository = salesHistoryRepository;
+            _supplierRepository = supplierRepository;
+            _logger = logger;
+        }
 
-		public void OrderAndSellArticle(int id, int maxExpectedPrice, int buyerId)
-		{
-			#region ordering article
 
-			Article article = null;
-			Article tempArticle = null;
-			var articleExists = Supplier1.ArticleInInventory(id);
-			if (articleExists)
-			{
-				tempArticle = Supplier1.GetArticle(id);
-				if (maxExpectedPrice < tempArticle.ArticlePrice)
-				{
-					articleExists = Supplier2.ArticleInInventory(id);
-					if (articleExists)
-					{
-						tempArticle = Supplier2.GetArticle(id);
-						if (maxExpectedPrice < tempArticle.ArticlePrice)
-						{
-							articleExists = Supplier3.ArticleInInventory(id);
-							if (articleExists)
-							{
-								tempArticle = Supplier3.GetArticle(id);
-								if (maxExpectedPrice < tempArticle.ArticlePrice)
-								{
-									article = tempArticle;
-								}
-							}
-						}
-					}
-				}
-			}
-			
-			article = tempArticle;
-			#endregion
+        /// <summary>
+        /// Geting sold article by Id
+        /// </summary>
+        /// <param name="articleId"></param>
+        /// <returns> First founded article with that articleId </returns>
+        public Article GetSoldArticle(int articleId)
+        {
+            _logger = new Logger(new InfoLogger());
+            _logger.LogMessage($"Trying to get sold article with ArticleId = {articleId}");
 
-			#region selling article
+            try
+            {
+                return _salesHistoryRepository.GetById(articleId);
+            }
+            catch (Exception ex)
+            {
+                string message = $"Could not get article with ArticleId = {articleId}";
 
-			if (article == null)
-			{
-				throw new Exception("Could not order article");
-			}
+                _logger.LogMessage(message);
+                _logger = new Logger(new ErrorLogger());
+                _logger.LogMessage(ex.Message);
 
-			logger.Debug("Trying to sell article with id=" + id);
+                throw new Exception(message);
+            }
+        }
 
-			article.IsSold = true;
-			article.SoldDate = DateTime.Now;
-			article.BuyerUserId = buyerId;
-			
-			try
-			{
-				DatabaseDriver.Save(article);
-				logger.Info("Article with id=" + id + " is sold.");
-			}
-			catch (ArgumentNullException ex)
-			{
-				logger.Error("Could not save article with id=" + id);
-				throw new Exception("Could not save article with id");
-			}
-			catch (Exception)
-			{
-			}
 
-			#endregion
-		}
+        /// <summary>
+        ///  This method trying to found an article with given parameters
+        /// </summary>
+        /// <param name="articleId"></param>
+        /// <param name="maxExpectedPrice"></param>
+        public Article OrderArticle(int articleId, decimal maxExpectedPrice)
+        {
+            _logger = new Logger(new InfoLogger());
+            _logger.LogMessage($"Trying to order article with ArticleId = {articleId} and MaxExpectedPrice = {maxExpectedPrice}");
 
-		public Article GetById(int id)
-		{
-			return DatabaseDriver.GetById(id);
-		}
-	}
+            try
+            {
+                return _supplierRepository.GetArticle(articleId, maxExpectedPrice);
+            }
+            catch (Exception ex)
+            {
+                string message = $"Could not order article with ArticleId = {articleId} and MaxExpectedPrice = {maxExpectedPrice}";
 
-	//in memory implementation
-	public class DatabaseDriver
-	{
-		private List<Article> _articles = new List<Article>();
+                _logger.LogMessage(message);
+                _logger = new Logger(new ErrorLogger());
+                _logger.LogMessage(ex.Message);
 
-		public Article GetById(int id)
-		{
-            return _articles.Single(x => x.ID == id);
-		}
+                throw new Exception(message);
+            }
+        }
 
-		public void Save(Article article)
-		{
-			_articles.Add(article);
-		}
-	}
 
-	public class Logger
-	{
-		public void Info(string message)
-		{
-			Console.WriteLine("Info: " + message);
-		}
+        /// <summary>
+        /// Order article > 
+        /// Save article in the sales history (sell) >
+        /// Notify Supplier to update InStock quantity
+        /// </summary>
+        public void SellArticle(int articleId, int buyerId, decimal maxExpectedPrice)
+        {
 
-		public void Error(string message)
-		{
-			Console.WriteLine("Error: " + message);
-		}
+            _logger = new Logger(new InfoLogger());
+            _logger.LogMessage($"Trying to Sell article with ArticleId = {articleId} and MaxExpectedPrice = {maxExpectedPrice}");
 
-		public void Debug(string message)
-		{
-			Console.WriteLine("Debug: " + message);
-		}
-	}
+            var article = OrderArticle(articleId, maxExpectedPrice);
 
-	public class Supplier1
-	{
-		public bool ArticleInInventory(int id)
-		{
-			return true;
-		}
+            article.SoldDate = DateTime.Now;
+            article.BuyerUserId = buyerId;
 
-		public Article GetArticle(int id)
-		{
-			return new Article()
-			{
-				ID = 1,
-				Name_of_article = "Article from supplier1",
-				ArticlePrice = 458
-			};
-		}
-	}
+            try
+            {
+                _salesHistoryRepository.Save(article);
 
-	public class Supplier2
-	{
-		public bool ArticleInInventory(int id)
-		{
-			return true;
-		}
+                _supplierRepository.RemoveFromStock(article);
 
-		public Article GetArticle(int id)
-		{
-			return new Article()
-			{
-				ID = 1,
-				Name_of_article = "Article from supplier2",
-				ArticlePrice = 459
-			};
-		}
-	}
+                _logger.LogMessage($"The Article with ArticleId = {articleId} is successfully sold");
+            }
+            catch (ArgumentNullException ex)
+            {
+                string message = $"Could not Sell article with ArticleId = {articleId} and MaxExpectedPrice = {maxExpectedPrice}";
 
-	public class Supplier3
-	{
-		public bool ArticleInInventory(int id)
-		{
-			return true;
-		}
+                _logger.LogMessage(message);
+                _logger = new Logger(new ErrorLogger());
+                _logger.LogMessage(ex.Message);
 
-		public Article GetArticle(int id)
-		{
-			return new Article()
-			{
-				ID = 1,
-				Name_of_article = "Article from supplier3",
-				ArticlePrice = 460
-			};
-		}
-	}
+                throw new Exception(message);
+            }
+        }
 
-	public class Article
-	{
-		public int ID { get; set; }
 
-		public string Name_of_article { get; set; }
-
-		public int ArticlePrice { get; set; }
-		public bool IsSold { get; set; }
-
-		public DateTime SoldDate { get; set; }
-		public int BuyerUserId { get; set; }
-	}
-
+        /// <summary>
+        /// Example how to register new supplier in runtime
+        /// </summary>
+        /// <param name="supplier"></param>
+        public void RegisterNewSupplier(ISupplier supplier)
+        {
+            _supplierRepository.RegisterNewSupplier(supplier);
+        }
+    }
 }
